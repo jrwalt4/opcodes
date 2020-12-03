@@ -8,7 +8,7 @@ export type OperationInput = {
   [ioId: string]: boolean | number;
 };
 export type OperationOutput = OperationInput;
-export type OperationSignature = (inputs: OperationInput) => OperationOutput;
+export type OperationSignature = (inputs: OperationInput) => Promise<OperationOutput>;
 
 export interface OperationDefinition {
   id: ID;
@@ -50,10 +50,10 @@ function dehashId(hash: string): string {
   return hash.split(":")[1];
 }
 
-function compileOperation(
+async function compileOperation(
   registry: OperationRegistry,
   op: UserOperationDefinition
-): OperationSignature {
+): Promise<OperationSignature> {
   let opConnections = op.definition.connections;
   let opOutputIDs = op.outputIDs;
   let opOperations = Object.entries(op.definition.operations).map(
@@ -68,7 +68,7 @@ function compileOperation(
     }
   );
 
-  return (inputs: OperationInput): OperationOutput => {
+  return async (inputs: OperationInput): Promise<OperationOutput> => {
     let opInputs = new Map<ID, number | boolean>();
     let opOutputs = new Map<ID, number | boolean>();
     for (let [id, val] of Object.entries(inputs)) {
@@ -92,7 +92,7 @@ function compileOperation(
           inputIDs.forEach((inpID) => {
             inputValues[dehashId(inpID)] = opInputs.get(inpID)!;
           });
-          let outputValues = executeOperation(registry, opCode, inputValues);
+          let outputValues = await executeOperation(registry, opCode, inputValues);
           for (let [outId, outVal] of Object.entries(outputValues)) {
             let hash = hashId(id, outId);
             opOutputs.set(hash, outVal);
@@ -114,8 +114,8 @@ function compileOperation(
   };
 }
 
-const NotOperation: OperationSignature = ({ A }) => ({ Q1: !Boolean(A) });
-const AndOperation: OperationSignature = ({ A, B }) => ({
+const NotOperation: OperationSignature = ({ A }) => Promise.resolve({ Q1: !Boolean(A) });
+const AndOperation: OperationSignature = ({ A, B }) => Promise.resolve({
   Q1: Boolean(A) && Boolean(B)
 });
 
@@ -149,11 +149,11 @@ export function getOperation(
   return def;
 }
 
-export function executeOperation(
+export async function executeOperation(
   registry: OperationRegistry,
   opId: ID,
   input: OperationInput
-): OperationOutput {
+): Promise<OperationOutput> {
   let opDef = getOperation(registry, opId);
   if (opDef == null) {
     throw new Error(`No operation "${opId}"`);
@@ -166,7 +166,7 @@ export function executeOperation(
     );
   }
   if (opDef.execute == null) {
-    opDef.execute = compileOperation(
+    opDef.execute = await compileOperation(
       registry,
       opDef as UserOperationDefinition
     );

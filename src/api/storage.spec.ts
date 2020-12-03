@@ -1,5 +1,8 @@
+import { hasOperation } from "./storage";
+
 describe("Registry", () => {
-  it("Should compile an operation", () => {
-    expect(true).toEqual(true);
+  it("Should have default operations", async () => {
+    let has = await hasOperation("NOT");
+    expect(has).toEqual(true);
   });
 });

@@ -1,10 +1,4 @@
-import {
-  defineDriver,
-  setDriver,
-  setItem,
-  getItem,
-  LOCALSTORAGE
-} from "localforage";
+import lf from "localforage";
 import memoryStorageDriver from "localforage-memoryStorageDriver";
 import { Observer, BehaviorSubject, Subscription } from "rxjs";
 import { filter, distinct, map } from "rxjs/operators";
@@ -22,18 +16,22 @@ enum RegistryKeys {
 const _registry = new BehaviorSubject<OperationRegistry>([]);
 const _registryDistinct = _registry.pipe(distinct());
 
-(async function _setupRegistry(_init_registry: OperationRegistry) {
+const _setup = (async function _setupRegistry(_init_registry: OperationRegistry) {
+  try {
   if (process.env.NODE_ENV === "test") {
-    await defineDriver(memoryStorageDriver);
-    await setDriver(memoryStorageDriver._driver);
+    await lf.defineDriver(memoryStorageDriver);
+    await lf.setDriver(memoryStorageDriver._driver);
   } else {
-    await setDriver(LOCALSTORAGE);
+    await lf.setDriver(lf.LOCALSTORAGE);
   }
+} catch(err) {
+  throw err;
+}
 
-  let ops = await getItem<OperationRegistry>(RegistryKeys.OP_DEFS);
+  let ops = await lf.getItem<OperationRegistry>(RegistryKeys.OP_DEFS);
   if (ops == null) {
     // initialize registry
-    ops = await setItem<OperationRegistry>(
+    ops = await lf.setItem<OperationRegistry>(
       RegistryKeys.OP_DEFS,
       _init_registry
     );
@@ -60,7 +58,8 @@ export function watchOperation(
 }
 
 async function _getOperations(): Promise<OperationRegistry> {
-  let ops = await getItem<OperationRegistry>(RegistryKeys.OP_DEFS);
+  await _setup;
+  let ops = await lf.getItem<OperationRegistry>(RegistryKeys.OP_DEFS);
   if (ops == null) {
     throw new Error("No registry");
   }
@@ -70,7 +69,8 @@ async function _getOperations(): Promise<OperationRegistry> {
 async function _setOperations(
   ops: OperationRegistry
 ): Promise<OperationRegistry> {
-  return await setItem<OperationRegistry>(RegistryKeys.OP_DEFS, ops);
+  await _setup;
+  return await lf.setItem<OperationRegistry>(RegistryKeys.OP_DEFS, ops);
 }
 
 export async function addOperation(def: OperationDefinition): Promise<void> {

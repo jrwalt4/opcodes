@@ -6,12 +6,13 @@ import {
 
 describe("Operation", () => {
   it("Should operate a default gate", () => {
-    expect(exec(defaultRegistry, "NOT", { A: true })).toEqual({
-      Q1: false
-    });
-    expect(exec(defaultRegistry, "NOT", { A: 1 })).toEqual({
-      Q1: false
-    });
+    return Promise.all([
+      expect(exec(defaultRegistry, "NOT", { A: true })).resolves.toEqual({
+        Q1: false
+      }),
+      expect(exec(defaultRegistry, "NOT", { A: 1 })).resolves.toEqual({
+        Q1: false
+      })]);
   });
 
   it("Should compile an operation", () => {
@@ -48,12 +49,14 @@ describe("Operation", () => {
         }
       }
     ] as OperationDefinition[]);
-    expect(exec(registry, "NOT2", { A: true })).toEqual({ Q1: false });
-    expect(exec(registry, "NOT2", { A: false })).toEqual({ Q1: true });
-    expect(exec(registry, "AND2", { A: true, B: true })).toEqual({ Q1: true });
-    expect(exec(registry, "AND2", { A: true, B: false })).toEqual({
-      Q1: false
-    });
-    expect(() => exec(registry, "AND2", { A: true })).toThrow();
+    return Promise.all([
+      expect(exec(registry, "NOT2", { A: true })).resolves.toEqual({ Q1: false }),
+      expect(exec(registry, "NOT2", { A: false })).resolves.toEqual({ Q1: true }),
+      expect(exec(registry, "AND2", { A: true, B: true })).resolves.toEqual({ Q1: true }),
+      expect(exec(registry, "AND2", { A: true, B: false })).resolves.toEqual({
+        Q1: false
+      }),
+      expect(() => exec(registry, "AND2", { A: true })).rejects
+    ]);
   });
 });
